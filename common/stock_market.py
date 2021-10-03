@@ -19,8 +19,10 @@ class StockMarket:
         """
         others
         """
+    def get_max_index(self):
+        return len(self.df) - 1
 
-    def get_one_price(self, index):
+    def get_price(self, index):
         return self.df['price'][index]
 
     def get_price_series(self, init_index, length):
