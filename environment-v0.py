@@ -39,19 +39,25 @@ class SimpleTrading(gym.Env):
     def reset(self):
         self.position = Position()
         self.step_counter = 0
-        self.current_index = self.min_index
+        self.current_index = self.min_index 
         current_price = self.market.get_price(self.current_index)
         self.total_reward = 0
 
         self.episode_counter += 1
 
-        return 0
+        obs = [
+                self.market.get_price_series(
+                    init_index=self.current_index-self.window_length+1,
+                    length=self.window_length
+                    ),
+                self.position.buy_price
+                ]
+        return obs
 
     def step(self, action_index):
         if not Action.has_value(action_index):
             raise ValueError('action value must be less than 3')
 
-        #print('current_index is', self.current_index)
         current_price = self.market.get_price(self.current_index)
 
         if Action(action_index) == Action.SELL:
@@ -59,12 +65,15 @@ class SimpleTrading(gym.Env):
             if self.position.share != 0:
                 reward = self.sell(current_price)
             else:
-                reward = 0
+                reward = -1
 
         elif Action(action_index) == Action.BUY:
             #print('BUY')
-            self.buy(current_price)
-            reward = 0
+            if self.position.share > 0:
+                reward = -1
+            else:
+                self.buy(current_price)
+                reward = 0
 
         elif Action(action_index) == Action.HOLD:
             #print('HOLD')
@@ -75,10 +84,10 @@ class SimpleTrading(gym.Env):
         self.current_index += 1
         obs = [
                 self.market.get_price_series(
-                    init_index=self.current_index-self.window_length,
+                    init_index=self.current_index-self.window_length+1,
                     length=self.window_length
                     ),
-                self.position.share
+                self.position.buy_price
                 ]
         if self.current_index == self.max_index + 1:
             done = True
@@ -100,21 +109,36 @@ class SimpleTrading(gym.Env):
 
     def debug(self):
         print('*** Debug ***')
-        self.reset()
-        for i in range(3):
-            obs, reward, done, info = self.step(i)
-            print(obs, reward, done, info)
-
-        self.reset()
-        for i in range(3):
-            obs, reward, done, info = self.step(i)
-            print(obs, reward, done, info)
+        obs = self.reset()
+        print('Obs', obs)
+        #for i in range(3):
+        #    obs, reward, done, info = self.step(i)
+        #    print(obs, reward, done, info)
+        obs, reward, done, _ = self.step(1)
+        print(obs, reward, done)
+        obs, reward, done, _ = self.step(1)
+        print(obs, reward, done)
 
     def random_play(self):
         self.reset()
 
         done = False
+        total_reward = 0
+        i = 0
         while not done:
-            action = self.action_space.sample()
+            print('*'*40)
+            print('i =', i)
+            if i == 0:
+                action = 1
+            elif i == 96:
+                action = 2
+            else:
+                action = 0
+            #action = self.action_space.sample()
+            print('action is', action)
             obs, reward, done, info = self.step(action)
+            total_reward += reward 
             print(obs, reward, done, info)
+            i += 1
+
+        print('Total reward', total_reward)
