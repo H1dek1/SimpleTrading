@@ -7,8 +7,8 @@ class StockMarket:
         """
         custom function
         """
-        t = np.arange(0, 100, 1)
-        val = t
+        t = np.arange(-3, 3, 0.06)
+        val = np.tanh(t)
         self.df = pd.DataFrame({
             'price': val
             })
@@ -19,6 +19,13 @@ class StockMarket:
         """
         others
         """
+    def plot_price(self):
+        fig, ax = plt.subplots(1, 1)
+        ax.plot(range(len(self.df['price'])), self.df['price'])
+        ax.set_xlabel('time', fontsize=20)
+        ax.set_ylabel('price', fontsize=20)
+        fig.savefig('price.png')
+
     def get_max_index(self):
         return len(self.df) - 1
 

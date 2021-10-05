@@ -17,6 +17,7 @@ class Action(enum.Enum):
 class SimpleTrading(gym.Env):
     def __init__(self, window_length=4):
         self.market = StockMarket()
+        self.market.plot_price()
 
         self.observation_space = [
                 gym.spaces.Box(
@@ -63,7 +64,7 @@ class SimpleTrading(gym.Env):
         if Action(action_index) == Action.SELL:
             #print('SELL')
             if self.position.share != 0:
-                reward = self.sell(current_price)
+                reward = 10 * self.sell(current_price)
             else:
                 reward = -1
 
@@ -89,7 +90,7 @@ class SimpleTrading(gym.Env):
                     ),
                 self.position.buy_price
                 ]
-        if self.current_index == self.max_index + 1:
+        if self.current_index == self.max_index:
             done = True
         else:
             done = False
@@ -134,11 +135,12 @@ class SimpleTrading(gym.Env):
                 action = 2
             else:
                 action = 0
-            #action = self.action_space.sample()
+            action = self.action_space.sample()
             print('action is', action)
             obs, reward, done, info = self.step(action)
             total_reward += reward 
-            print(obs, reward, done, info)
+            #print(obs, reward, done, info)
+            print('reward', reward)
             i += 1
 
         print('Total reward', total_reward)
