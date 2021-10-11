@@ -2,7 +2,7 @@ import numpy as np
 import gym
 import enum
 from simple_trading.common.stock_market import StockMarket
-from simple_trading.common.position import Position
+from simple_trading.common.position import Position, ShareHolder
 
 class Action(enum.Enum):
     HOLD = 0
@@ -19,16 +19,26 @@ class SimpleTrading(gym.Env):
         self.market = StockMarket()
         self.market.plot_price()
 
-        self.observation_space = [
-                gym.spaces.Box(
-                    shape=(window_length,1), 
-                    low=0.0, 
-                    high=1.0),
-                gym.spaces.Box(
+        self.observation_space = gym.spaces.Dict({
+            'series_data': gym.spaces.Box(
+                shape=(window_length, 1),
+                low=-10.0,
+                high=10.0
+                ),
+            'sub_input': gym.spaces.Dict({
+                'latent_gain': gym.spaces.Box(
                     shape=(1,), 
-                    low=0.0, 
-                    high=1.0)
-                ]
+                    low=-10.0, 
+                    high=10.0
+                    ),
+                })
+            })
+        #print(self.observation_space['series_data'].shape)
+        #print(self.observation_space['sub_input']['latent_gain'].shape)
+        #print(type(self.observation_space['sub_input']))
+
+        #for item in self.observation_space['sub_input']:
+        #    print(item, type(item))
 
         self.action_space = gym.spaces.Discrete(3)
         
@@ -38,7 +48,7 @@ class SimpleTrading(gym.Env):
         self.max_index = self.market.get_max_index()
 
     def reset(self):
-        self.position = Position()
+        self.holder = ShareHolder()
         self.step_counter = 0
         self.current_index = self.min_index 
         current_price = self.market.get_price(self.current_index)
@@ -51,7 +61,7 @@ class SimpleTrading(gym.Env):
                     init_index=self.current_index-self.window_length+1,
                     length=self.window_length
                     ),
-                self.position.buy_price
+                0.0
                 ]
         return obs
 
@@ -63,32 +73,35 @@ class SimpleTrading(gym.Env):
 
         if Action(action_index) == Action.SELL:
             #print('SELL')
-            if self.position.share != 0:
+            if self.holder.number != 0:
                 reward = 10 * self.sell(current_price)
+                #print('Sold:', current_price)
             else:
                 reward = -1
 
         elif Action(action_index) == Action.BUY:
             #print('BUY')
-            if self.position.share > 0:
-                reward = -1
-            else:
+            if self.holder.number == 0:
                 self.buy(current_price)
                 reward = 0
+                #print('Bought:', current_price)
+                #reward = self.buy(current_price)
+            else:
+                reward = -1
 
         elif Action(action_index) == Action.HOLD:
             #print('HOLD')
             reward = 0
 
-
         self.total_reward += reward
         self.current_index += 1
+        next_price = self.market.get_price(self.current_index)
         obs = [
                 self.market.get_price_series(
                     init_index=self.current_index-self.window_length+1,
                     length=self.window_length
                     ),
-                self.position.buy_price
+                10*self.holder.get_latent_gain(next_price)
                 ]
         if self.current_index == self.max_index:
             done = True
@@ -100,12 +113,13 @@ class SimpleTrading(gym.Env):
         return obs, reward, done, info
 
     def buy(self, price):
-        self.position.buy(price)
+        self.holder.buy(price)
         return -price
 
     def sell(self, price):
-        bought_price = self.position.sell()
-        return price - bought_price
+        interests = self.holder.sell(price)
+        #return price
+        return interests
 
 
     def debug(self):
@@ -121,7 +135,7 @@ class SimpleTrading(gym.Env):
         print(obs, reward, done)
 
     def random_play(self):
-        self.reset()
+        obs = self.reset()
 
         done = False
         total_reward = 0
@@ -136,6 +150,7 @@ class SimpleTrading(gym.Env):
             else:
                 action = 0
             action = self.action_space.sample()
+            print('latent_gain: ', obs[1])
             print('action is', action)
             obs, reward, done, info = self.step(action)
             total_reward += reward 
