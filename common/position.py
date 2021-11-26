@@ -1,45 +1,38 @@
 import numpy as np
 
-class Position:
-    def __init__(self):
-        self.share = 0
-        self.buy_price = 0
-
-    def buy(self, price):
-        self.share = 1
-        self.buy_price = price
-
-    def sell(self):
-        self.share = 0
-        tmp_price = self.buy_price
-        self.buy_price = 0
-        return tmp_price
 
 class ShareHolder:
-    def __init__(self):
-        self.number = 0
-        self.net_bought_price = 0.0
+    def __init__(self, max_share, reward_gain):
+        self.max_share = max_share
+        self.n_share = 0
+        self.sum_share = 0.0
+        self.reward_gain = reward_gain
 
-    def buy(self, price):
-        self.number += 1
-        self.net_bought_price += price * 1
+    def buy(self, price, volume):
+        if volume + self.n_share > self.max_share:
+            return -1
+        else:
+            self.n_share += volume
+            self.sum_share += price * volume
+            return 0
 
-    def sell(self, price):
-        thresh_price = self.net_bought_price
+    def sell(self, price, volume):
+        if self.n_share == 0:
+            return -1
 
-        self.number = 0
-        self.net_bought_price = 0
-        #self.number -= n TODO
-        #self.net_bought_price = min(0.0, self.net_bought_price-price) TODO
-        return (price - thresh_price) * 1
+        else:
+            actual_volume = min(volume, self.n_share)
+            average_price = self.sum_share / self.n_share
+            self.n_share -= actual_volume
+            total_price = price * actual_volume
+            self.sum_share = max(0, self.sum_share-total_price)
 
-    def average_net_bought_price(self):
-        return self.net_bought_price / self.number
+            return self.reward_gain * actual_volume * (price - average_price)
 
     def get_latent_gain(self, price):
-        if self.number == 0:
+        if self.n_share == 0:
             return 0;
         else:
-            return price - self.net_bought_price
+            return price - (self.sum_share / self.n_share)
 
 

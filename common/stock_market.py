@@ -7,8 +7,16 @@ class StockMarket:
         """
         custom function
         """
-        t = np.arange(-3, 3, 0.06)
-        val = np.tanh(t)
+        #t = np.arange(-3, 3, 0.06)
+        #val = np.tanh(t)
+
+        t = np.arange(-np.pi, np.pi, np.pi/50)
+        #val = -np.sin(2*t)
+        #val = -np.sin(2*t) + 1
+        val = np.sin(t) + 1.0
+
+        # val = np.arange(0, 100, 1)
+
         self.df = pd.DataFrame({
             'price': val
             })
